@@ -1,56 +1,36 @@
-import { useState, useEffect } from 'react';
-import BasicTable from './components/BasicTable';
-import StickyHeadTable from './components/StickyHeadTable';
+import DataSection from './components/DataSection';
 import { inventoryColumns, salesColumns, productColumns } from './config/tableConfig';
-import type { InventoryData, SalesData, ProductData } from './utils/csvUtils';
+import { useDataLoader } from './hooks/useDataLoader';
+import { downloadCSV, generateFilename } from './utils/csvDownload';
 
 function App() {
-  const [inventoryData, setInventoryData] = useState<InventoryData[]>([]);
-  const [salesData, setSalesData] = useState<SalesData[]>([]);
-  const [productData, setProductData] = useState<ProductData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { inventoryData, salesData, productData, isLoading, error } = useDataLoader();
 
-  // Load data from database when component mounts
-  useEffect(() => {
-    const loadDatabaseData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch all data in parallel
-        const [inventoryResponse, salesResponse, productsResponse] = await Promise.all([
-          fetch('http://localhost:3001/api/inventory'),
-          fetch('http://localhost:3001/api/sales'),
-          fetch('http://localhost:3001/api/products')
-        ]);
-        
-        const inventoryResult = await inventoryResponse.json();
-        const salesResult = await salesResponse.json();
-        const productsResult = await productsResponse.json();
-        
-        setInventoryData(inventoryResult.data || []);
-        setSalesData(salesResult.data || []);
-        setProductData(productsResult.data || []);
-        
-        console.log('Database data loaded:', {
-          inventory: inventoryResult.data?.length || 0,
-          sales: salesResult.data?.length || 0,
-          products: productsResult.data?.length || 0
-        });
-        
-      } catch (error) {
-        console.error('Error loading database data:', error);
-        alert('Failed to load data from database');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Upload handlers (placeholder for now)
+  const handleProductsUpload = () => {
+    alert('Products CSV upload - coming soon!');
+  };
 
-    loadDatabaseData();
-  }, []);
+  const handleInventoryUpload = () => {
+    alert('Inventory CSV upload - coming soon!');
+  };
 
-  const EmptyStateMessage = ({ message }: { message: string }) => (
-    <p style={{ color: '#666', fontStyle: 'italic' }}>{message}</p>
-  );
+  const handleSalesUpload = () => {
+    alert('Sales CSV upload - coming soon!');
+  };
+
+  // Download handlers
+  const handleProductsDownload = () => {
+    downloadCSV(productData, generateFilename('products'));
+  };
+
+  const handleInventoryDownload = () => {
+    downloadCSV(inventoryData, generateFilename('inventory'));
+  };
+
+  const handleSalesDownload = () => {
+    downloadCSV(salesData, generateFilename('sales'));
+  };
 
   if (isLoading) {
     return (
@@ -61,51 +41,46 @@ function App() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="App" style={{ padding: '20px' }}>
+        <h1>ReOrdr: Inventory Management System</h1>
+        <p style={{ color: 'red' }}>Error: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="App" style={{ padding: '20px' }}>
       <h1>ReOrdr: Inventory Management System</h1>
       
-      {/* Products Section */}
-      <section style={{ marginBottom: '40px' }}>
-        <h2>Products ({productData.length} items)</h2>
-        {productData.length > 0 ? (
-          <BasicTable 
-            data={productData} 
-            columns={productColumns}
-            getRowKey={(row, index) => `product-${row.sku}-${index}`}
-          />
-        ) : (
-          <EmptyStateMessage message="No product data in database." />
-        )}
-      </section>
+      <DataSection
+        title="Products"
+        data={productData}
+        columns={productColumns}
+        onUpload={handleProductsUpload}
+        onDownload={handleProductsDownload}
+        getRowKey={(row, index) => `product-${row.sku}-${index}`}
+      />
       
-      {/* Inventory Section */}
-      <section style={{ marginBottom: '40px' }}>
-        <h2>Inventory ({inventoryData.length} items)</h2>
-        {inventoryData.length > 0 ? (
-          <BasicTable 
-            data={inventoryData} 
-            columns={inventoryColumns}
-            getRowKey={(row, index) => `inventory-${row.sku}-${index}`}
-          />
-        ) : (
-          <EmptyStateMessage message="No inventory data in database." />
-        )}
-      </section>
+      <DataSection
+        title="Inventory"
+        data={inventoryData}
+        columns={inventoryColumns}
+        onUpload={handleInventoryUpload}
+        onDownload={handleInventoryDownload}
+        getRowKey={(row, index) => `inventory-${row.sku}-${index}`}
+      />
       
-      {/* Sales Section */}
-      <section style={{ marginBottom: '40px' }}>
-        <h2>Sales ({salesData.length} records)</h2>
-        {salesData.length > 0 ? (
-          <StickyHeadTable 
-            data={salesData} 
-            columns={salesColumns}
-            getRowKey={(row, index) => `sales-${row.sku}-${index}`}
-          />
-        ) : (
-          <EmptyStateMessage message="No sales data in database." />
-        )}
-      </section>
+      <DataSection
+        title="Sales"
+        data={salesData}
+        columns={salesColumns}
+        onUpload={handleSalesUpload}
+        onDownload={handleSalesDownload}
+        getRowKey={(row, index) => `sales-${row.sku}-${index}`}
+        useStickyHeader={true}
+      />
     </div>
   );
 }
