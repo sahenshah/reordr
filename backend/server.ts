@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import { initializeDb, seedDatabase, getDatabaseStats } from './db/database';
 import { openDb } from './db/database';
-import todoRoutes from './routes/todos';
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Root route with database stats
 app.get('/', async (req, res) => {
@@ -119,13 +119,70 @@ app.put('/api/products/:id', async (req, res) => {
   }
 });
 
+// Bulk insert products data (replaces all existing data)
+app.post('/api/products/bulk', async (req, res): Promise<void> => {
+  const db = await openDb();
+  try {
+    const { data } = req.body;
+    
+    if (!Array.isArray(data) || data.length === 0) {
+      res.status(400).json({ error: 'No data provided' });
+      return;
+    }
+    
+    console.log(`Received ${data.length} products for bulk insert`);
+    
+    // Clear existing products data
+    await db.run('DELETE FROM products');
+    console.log('Cleared existing products data');
+    
+    // Insert new data
+    const stmt = await db.prepare(`
+      INSERT INTO products (sku, name, description, category, unit_price)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    let insertCount = 0;
+    for (const item of data) {
+      try {
+        await stmt.run(
+          item.sku,
+          item.name,
+          item.description || '',
+          item.category || '',
+          item.unit_price || 0
+        );
+        insertCount++;
+      } catch (error) {
+        console.error(`Error inserting product ${item.sku}:`, error);
+      }
+    }
+    
+    await stmt.finalize();
+    console.log(`Bulk insert completed. Inserted ${insertCount} products`);
+    
+    res.json({ 
+      success: true,
+      message: 'Products bulk insert completed',
+      insertedCount: insertCount,
+      totalReceived: data.length
+    });
+    
+  } catch (error) {
+    console.error('Error in bulk products insert:', error);
+    res.status(500).json({ error: 'Failed to bulk insert products' });
+  } finally {
+    await db.close();
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        message: 'ReOrdr Backend API is running',
-        timestamp: new Date().toISOString()
-        });
+  res.json({
+    status: 'OK',
+    message: 'ReOrdr Backend API is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
 initializeDb()

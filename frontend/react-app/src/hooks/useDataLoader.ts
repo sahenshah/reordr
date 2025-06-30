@@ -7,6 +7,7 @@ interface DatabaseData {
   productData: ProductData[];
   isLoading: boolean;
   error: string | null;
+  refreshData: () => Promise<void>;
 }
 
 const API_BASE_URL = 'http://localhost:3001';
@@ -56,11 +57,37 @@ export const useDataLoader = (): DatabaseData => {
     loadDatabaseData();
   }, []);
 
+  const refreshData = async () => {
+    setIsLoading(true);
+    try {
+      // Re-fetch all your data here
+      const [inventory, sales, products] = await Promise.all([
+        fetch('/api/inventory').then(res => res.json()),
+        fetch('/api/sales').then(res => res.json()),
+        fetch('/api/products').then(res => res.json())
+      ]);
+      
+      setInventoryData(inventory.data);
+      setSalesData(sales.data);
+      setProductData(products.data);
+      setError(null);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to refresh data');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     inventoryData,
     salesData,
     productData,
     isLoading,
-    error
+    error,
+    refreshData // ✅ Return the refresh function
   };
 };
