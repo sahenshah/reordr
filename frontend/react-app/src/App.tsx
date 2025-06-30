@@ -3,7 +3,7 @@ import DataSection from './components/DataSection';
 import { inventoryColumns, salesColumns, productColumns } from './config/tableConfig';
 import { useDataLoader } from './hooks/useDataLoader';
 import { downloadCSV, generateFilename } from './utils/csvDownload';
-import { parseProductsCSV } from './utils/csvParser';
+import { parseProductsCSV, parseInventoryCSV, parseSalesCSV } from './utils/csvParser';
 
 function App() {
   const { inventoryData, salesData, productData, isLoading, error, refreshData } = useDataLoader();
@@ -32,42 +32,70 @@ function App() {
     if (!file) return;
 
     try {
+      console.log('Uploading products CSV...');
       await parseProductsCSV(file);
+
+      console.log('Upload successful, refreshing data...');
+      // This will automatically trigger the loading state in useDataLoader
       await refreshData();
       alert('Products uploaded successfully!');
+
     } catch (err: any) {
+      console.error('Upload error:', err);
       alert(`Error uploading Products CSV: ${err.message}`);
-    }
-    
-    // Reset the file input
-    if (productsFileInputRef.current) {
-      productsFileInputRef.current.value = '';
+    } finally {
+      // Reset the file input
+      if (productsFileInputRef.current) {
+        productsFileInputRef.current.value = '';
+      }
     }
   };
 
   const handleInventoryFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
-    // For now, just show alert until we implement inventory CSV parsing
-    alert('Inventory CSV upload - coming soon!');
-    
-    // Reset the file input
-    if (inventoryFileInputRef.current) {
-      inventoryFileInputRef.current.value = '';
+
+    try {
+      console.log('Uploading inventory CSV...');
+      await parseInventoryCSV(file);
+
+      console.log('Upload successful, refreshing data...');
+      // This will automatically trigger the loading state in useDataLoader
+      await refreshData();
+      alert('Inventory uploaded successfully!');
+
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      alert(`Error uploading Inventory CSV: ${err.message}`);
+    } finally {
+      // Reset the file input
+      if (inventoryFileInputRef.current) {
+        inventoryFileInputRef.current.value = '';
+      }
     }
   };
 
   const handleSalesFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
-    // For now, just show alert until we implement sales CSV parsing
-    alert('Sales CSV upload - coming soon!');
-    
-    // Reset the file input
-    if (salesFileInputRef.current) {
-      salesFileInputRef.current.value = '';
+
+    try {
+      console.log('Uploading sales CSV...');
+      await parseSalesCSV(file);
+
+      console.log('Upload successful, refreshing data...');
+      // This will automatically trigger the loading state in useDataLoader
+      await refreshData();
+      alert('Sales uploaded successfully!');
+
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      alert(`Error uploading Sales CSV: ${err.message}`);
+    } finally {
+      // Reset the file input
+      if (salesFileInputRef.current) {
+        salesFileInputRef.current.value = '';
+      }
     }
   };
 
